@@ -1,12 +1,23 @@
 import { getServerSession } from 'next-auth/next';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Check if required environment variables are available
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn('Supabase environment variables are not configured');
+}
+
+const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
 export async function getServerUser() {
+  if (!supabase) {
+    throw new Error('Database not configured - missing environment variables');
+  }
+
   const session = await getServerSession();
   
   if (!session?.user?.email) {
@@ -28,6 +39,10 @@ export async function getServerUser() {
 }
 
 export async function getUserProjects(userId: string) {
+  if (!supabase) {
+    throw new Error('Database not configured - missing environment variables');
+  }
+
   const { data: projects, error } = await supabase
     .from('projects')
     .select('*')
@@ -43,6 +58,10 @@ export async function getUserProjects(userId: string) {
 }
 
 export async function createUserProject(userId: string, name: string) {
+  if (!supabase) {
+    throw new Error('Database not configured - missing environment variables');
+  }
+
   // Generate API key
   const { data: apiKeyData, error: apiKeyError } = await supabase
     .rpc('generate_api_key');
