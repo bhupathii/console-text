@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Check if required environment variables are available
+const requiredEnvVars = {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+};
+
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([_, value]) => !value)
+  .map(([key]) => key);
 
 export async function POST(req: NextRequest) {
+  // Return error if environment variables are missing
+  if (missingVars.length > 0) {
+    return NextResponse.json({ 
+      error: 'Service not configured', 
+      missing: missingVars,
+      message: 'Required environment variables are not set. Please configure your database connection.'
+    }, { status: 503 });
+  }
+
   try {
+    // Dynamically import auth dependencies only when env vars are available
+    const { getServerSession } = await import('next-auth/next');
+    const { createClient } = await import('@supabase/supabase-js');
+    
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const session = await getServerSession();
     
     if (!session?.user?.email) {
