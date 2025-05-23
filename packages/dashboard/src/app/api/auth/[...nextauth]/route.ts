@@ -30,18 +30,21 @@ const missingVars = Object.entries(requiredEnvVars)
 
 // Create error handler for missing environment variables
 const createErrorHandler = () => {
-  return () => {
-    return new Response(
-      JSON.stringify({ 
-        error: 'Authentication not configured', 
-        missing: missingVars 
-      }), 
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
-    );
-  };
+  return NextAuth({
+    providers: [],
+    pages: {
+      signIn: '/auth/signin',
+      error: '/auth/signin',
+    },
+    callbacks: {
+      async signIn() {
+        return false;
+      },
+      async redirect({ url, baseUrl }) {
+        return `${baseUrl}/auth/signin?error=Configuration`;
+      },
+    },
+  });
 };
 
 // Create NextAuth handler when all variables are present
@@ -70,6 +73,7 @@ const createAuthHandler = () => {
     pages: {
       signIn: '/auth/signin',
       newUser: '/onboarding',
+      error: '/auth/signin',
     },
     session: {
       strategy: 'jwt',
@@ -133,6 +137,13 @@ const createAuthHandler = () => {
           }
         }
         return true;
+      },
+      async redirect({ url, baseUrl }) {
+        // Allows relative callback URLs
+        if (url.startsWith("/")) return `${baseUrl}${url}`;
+        // Allows callback URLs on the same origin
+        else if (new URL(url).origin === baseUrl) return url;
+        return baseUrl;
       },
     },
   });
