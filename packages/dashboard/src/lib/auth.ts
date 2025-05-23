@@ -1,5 +1,8 @@
 import { getServerSession } from 'next-auth/next';
 import { createClient } from '@supabase/supabase-js';
+import type { NextAuthOptions } from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import { SupabaseAdapter } from '@auth/supabase-adapter';
 
 // Check if required environment variables are available
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,6 +15,51 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = supabaseUrl && supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
+
+// Extend NextAuth types
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  ],
+  adapter: SupabaseAdapter({
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  }),
+  callbacks: {
+    async session({ session, user }: any) {
+      // Add user ID to session
+      if (session?.user && user?.id) {
+        session.user.id = user.id;
+      }
+      return session;
+    },
+    async signIn({ user, account, profile }: any) {
+      // Allow sign in
+      return true;
+    },
+  },
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/signin',
+  },
+  session: {
+    strategy: 'database' as const,
+  },
+};
 
 export async function getServerUser() {
   if (!supabase) {
