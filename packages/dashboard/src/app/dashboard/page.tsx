@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../api/auth/[...nextauth]/route';
 
 // Use dynamic generation to check environment variables and auth at runtime
 export const dynamic = 'force-dynamic';
@@ -17,20 +19,30 @@ function areEnvVarsConfigured() {
 
 async function getServerUser() {
   try {
-    const { getServerSession } = await import('next-auth/next');
-    const { createClient } = await import('@supabase/supabase-js');
-    
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return null;
     }
 
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // First try to get user from NextAuth database
+    if (session.user.id) {
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        avatar_url: session.user.image,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    // Fallback: try to find user in custom users table
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
@@ -38,8 +50,14 @@ async function getServerUser() {
       .single();
 
     if (error) {
-      console.error('Error fetching user:', error);
-      return null;
+      console.log('User not found in custom table, using session data');
+      return {
+        id: session.user.email, // Fallback ID
+        email: session.user.email,
+        name: session.user.name,
+        avatar_url: session.user.image,
+        created_at: new Date().toISOString(),
+      };
     }
 
     return user;
@@ -69,7 +87,7 @@ async function getUserProjects(userId: string) {
       return [];
     }
 
-    return projects;
+    return projects || [];
   } catch (error) {
     console.error('Projects fetch error:', error);
     return [];

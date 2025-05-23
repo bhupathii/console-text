@@ -2,12 +2,14 @@
 
 import { signIn, getSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if auth is configured
@@ -17,27 +19,47 @@ export default function SignIn() {
     );
     setIsConfigured(configured);
 
+    // Check for errors from callback
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError('Authentication failed. Please try again.');
+    }
+
     if (configured) {
       // Check if user is already signed in
       getSession().then((session) => {
         if (session) {
-          router.push('/dashboard');
+          const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+          router.push(callbackUrl);
         }
       });
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleGoogleSignIn = async () => {
     if (!isConfigured) return;
     
     setIsLoading(true);
+    setError(null);
+    
     try {
-      await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: true 
+      const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+      
+      const result = await signIn('google', { 
+        callbackUrl,
+        redirect: false // Handle redirect manually
       });
+      
+      if (result?.error) {
+        setError('Authentication failed. Please try again.');
+        setIsLoading(false);
+      } else if (result?.url) {
+        // Redirect to the URL returned by NextAuth
+        window.location.href = result.url;
+      }
     } catch (error) {
       console.error('Sign in error:', error);
+      setError('Something went wrong. Please try again.');
       setIsLoading(false);
     }
   };
@@ -58,6 +80,17 @@ export default function SignIn() {
               </p>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="text-red-600 text-sm">
+                  ⚠️ {error}
+                </div>
+              </div>
+            </div>
+          )}
 
           {isConfigured ? (
             <>
