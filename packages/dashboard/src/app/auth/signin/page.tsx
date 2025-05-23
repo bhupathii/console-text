@@ -1,18 +1,13 @@
 'use client';
 
 import { signIn, getSession } from 'next-auth/react';
-import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
-function SignInContent() {
+export default function SignIn() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if auth is configured
@@ -22,47 +17,27 @@ function SignInContent() {
     );
     setIsConfigured(configured);
 
-    // Check for errors from callback
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError('Authentication failed. Please try again.');
-    }
-
     if (configured) {
       // Check if user is already signed in
       getSession().then((session) => {
         if (session) {
-          const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-          router.push(callbackUrl);
+          router.push('/dashboard');
         }
       });
     }
-  }, [router, searchParams]);
+  }, [router]);
 
   const handleGoogleSignIn = async () => {
     if (!isConfigured) return;
     
     setIsLoading(true);
-    setError(null);
-    
     try {
-      const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-      
-      const result = await signIn('google', { 
-        callbackUrl,
-        redirect: false // Handle redirect manually
+      await signIn('google', { 
+        callbackUrl: '/dashboard',
+        redirect: true 
       });
-      
-      if (result?.error) {
-        setError('Authentication failed. Please try again.');
-        setIsLoading(false);
-      } else if (result?.url) {
-        // Redirect to the URL returned by NextAuth
-        window.location.href = result.url;
-      }
     } catch (error) {
       console.error('Sign in error:', error);
-      setError('Something went wrong. Please try again.');
       setIsLoading(false);
     }
   };
@@ -83,17 +58,6 @@ function SignInContent() {
               </p>
             </div>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center">
-                <div className="text-red-600 text-sm">
-                  ⚠️ {error}
-                </div>
-              </div>
-            </div>
-          )}
 
           {isConfigured ? (
             <>
@@ -193,26 +157,5 @@ function SignInContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function SignIn() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="max-w-md mx-auto text-center">
-          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto">
-              <span className="text-white text-2xl font-bold">CT</span>
-            </div>
-            <div className="flex justify-center">
-              <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    }>
-      <SignInContent />
-    </Suspense>
   );
 } 
