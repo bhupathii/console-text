@@ -1,38 +1,75 @@
-import { redirect } from 'next/navigation';
-import { getServerUser } from '@/lib/auth';
+'use client';
 
-export default async function Home() {
-  try {
-    const user = await getServerUser();
-    
-    if (user) {
-      redirect('/dashboard');
-    } else {
-      redirect('/auth/signin');
-    }
-  } catch (error) {
-    console.error('Authentication error:', error);
-    // Fallback to a welcome page when auth is not configured
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="max-w-md mx-auto text-center bg-white p-8 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to Console.text</h1>
-          <p className="text-gray-600 mb-6">
-            Real-time Telegram alerts for developers. Configure your environment variables to get started.
-          </p>
-          <div className="text-sm text-gray-500">
-            <p>Required environment variables:</p>
-            <ul className="mt-2 text-left">
-              <li>• NEXT_PUBLIC_SUPABASE_URL</li>
-              <li>• SUPABASE_SERVICE_ROLE_KEY</li>
-              <li>• GOOGLE_CLIENT_ID</li>
-              <li>• GOOGLE_CLIENT_SECRET</li>
-              <li>• NEXTAUTH_SECRET</li>
-              <li>• NEXTAUTH_URL</li>
-            </ul>
+import { useEffect, useState } from 'react';
+
+export default function Home() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null; // Prevent hydration mismatch
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="max-w-2xl mx-auto text-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg">
+          <div className="mb-6">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Console.text</h1>
+            <p className="text-xl text-gray-600">Real-time Telegram alerts for developers</p>
+          </div>
+          
+          <div className="mb-8">
+            <p className="text-gray-700 mb-4">
+              Transform your console logs into instant Telegram notifications. Monitor your applications, 
+              track errors, and stay informed about your code's behavior in real-time.
+            </p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-semibold text-yellow-800 mb-3">⚙️ Configuration Required</h2>
+            <p className="text-yellow-700 mb-4">
+              This application requires environment variables to be configured for full functionality.
+            </p>
+            
+            <div className="text-left text-sm text-yellow-700">
+              <p className="font-medium mb-2">Required environment variables:</p>
+              <ul className="space-y-1 list-disc list-inside">
+                <li><code>NEXT_PUBLIC_SUPABASE_URL</code> - Database URL</li>
+                <li><code>SUPABASE_SERVICE_ROLE_KEY</code> - Database service key</li>
+                <li><code>GOOGLE_CLIENT_ID</code> - OAuth client ID</li>
+                <li><code>GOOGLE_CLIENT_SECRET</code> - OAuth client secret</li>
+                <li><code>NEXTAUTH_SECRET</code> - Authentication secret</li>
+                <li><code>NEXTAUTH_URL</code> - Your deployed URL</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 text-left">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-blue-900 mb-2">📊 Dashboard</h3>
+              <p className="text-blue-700 text-sm">
+                Monitor all your projects, view message history, and manage Telegram configurations.
+              </p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-green-900 mb-2">🔔 Real-time Alerts</h3>
+              <p className="text-green-700 text-sm">
+                Get instant notifications in Telegram when your application logs important events.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-sm text-gray-500">
+            <p>
+              Once environment variables are configured, this page will redirect to the authentication system.
+            </p>
           </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 } 
