@@ -3,6 +3,5 @@
   "devCommand": "cd packages/dashboard && npm run dev",
   "installCommand": "npm install --prefix packages/dashboard",
   "framework": "nextjs",
-  "outputDirectory": "packages/dashboard/.next",
-  "cwd": "packages/dashboard"
+  "outputDirectory": "packages/dashboard/.next"
 } 
