@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'Transform your console logs into instant Telegram notifications',
 };
 
-// Force static generation
+// Force static generation - Fixed build issues (2024-12-23)
 export const dynamic = 'force-static';
 
 export default function Home() {

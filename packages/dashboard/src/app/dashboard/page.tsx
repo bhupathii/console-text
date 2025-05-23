@@ -1,7 +1,3 @@
-import { redirect } from 'next/navigation';
-import { getServerUser, getUserProjects } from '@/lib/auth';
-import DashboardClient from './dashboard-client';
-
 export default function Dashboard() {
   // Show configuration message when auth is not configured
   return (

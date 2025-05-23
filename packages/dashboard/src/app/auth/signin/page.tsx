@@ -1,35 +1,4 @@
-'use client';
-
-import { signIn, getSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-
 export default function SignIn() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    // Check if user is already signed in
-    getSession().then((session) => {
-      if (session) {
-        router.push('/dashboard');
-      }
-    });
-  }, [router]);
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signIn('google', { 
-        callbackUrl: '/dashboard',
-        redirect: true 
-      });
-    } catch (error) {
-      console.error('Sign in error:', error);
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-md mx-auto">
