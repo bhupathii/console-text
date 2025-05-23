@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles for Console.text */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.severity-critical {
+  @apply bg-red-50 border-red-200 text-red-800;
+}
+
+.severity-error {
+  @apply bg-orange-50 border-orange-200 text-orange-800;
+}
+
+.severity-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+}
+
+.severity-info {
+  @apply bg-blue-50 border-blue-200 text-blue-800;
+} 
