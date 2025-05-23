@@ -1,18 +1,14 @@
-'use client';
+import type { Metadata } from 'next';
 
-import { useEffect, useState } from 'react';
+export const metadata: Metadata = {
+  title: 'Console.text - Real-time Telegram alerts for developers',
+  description: 'Transform your console logs into instant Telegram notifications',
+};
+
+// Force static generation
+export const dynamic = 'force-static';
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-2xl mx-auto text-center">
@@ -38,17 +34,17 @@ export default function Home() {
             <div className="text-left text-sm text-yellow-700">
               <p className="font-medium mb-2">Required environment variables:</p>
               <ul className="space-y-1 list-disc list-inside">
-                <li><code>NEXT_PUBLIC_SUPABASE_URL</code> - Database URL</li>
-                <li><code>SUPABASE_SERVICE_ROLE_KEY</code> - Database service key</li>
-                <li><code>GOOGLE_CLIENT_ID</code> - OAuth client ID</li>
-                <li><code>GOOGLE_CLIENT_SECRET</code> - OAuth client secret</li>
-                <li><code>NEXTAUTH_SECRET</code> - Authentication secret</li>
-                <li><code>NEXTAUTH_URL</code> - Your deployed URL</li>
+                <li><code className="bg-yellow-100 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> - Database URL</li>
+                <li><code className="bg-yellow-100 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code> - Database service key</li>
+                <li><code className="bg-yellow-100 px-1 rounded">GOOGLE_CLIENT_ID</code> - OAuth client ID</li>
+                <li><code className="bg-yellow-100 px-1 rounded">GOOGLE_CLIENT_SECRET</code> - OAuth client secret</li>
+                <li><code className="bg-yellow-100 px-1 rounded">NEXTAUTH_SECRET</code> - Authentication secret</li>
+                <li><code className="bg-yellow-100 px-1 rounded">NEXTAUTH_URL</code> - Your deployed URL</li>
               </ul>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4 text-left">
+          <div className="grid md:grid-cols-2 gap-4 text-left mb-6">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-2">📊 Dashboard</h3>
               <p className="text-blue-700 text-sm">
@@ -63,9 +59,12 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-8 text-sm text-gray-500">
+          <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600">
+            <p className="mb-2">
+              <strong>Deployment Status:</strong> ✅ Successfully deployed
+            </p>
             <p>
-              Once environment variables are configured, this page will redirect to the authentication system.
+              Once environment variables are configured in Vercel, this page will redirect to the authentication system.
             </p>
           </div>
         </div>

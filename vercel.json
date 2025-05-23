@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run build --workspace=packages/dashboard",
-  "installCommand": "npm install",
-  "outputDirectory": "packages/dashboard/.next"
+  "buildCommand": "cd packages/dashboard && npm install && npm run build",
+  "outputDirectory": "packages/dashboard/.next",
+  "framework": "nextjs",
+  "installCommand": "npm install"
 } 
