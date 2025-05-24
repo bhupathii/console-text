@@ -59,7 +59,14 @@ Or use: https://generate-secret.vercel.app/32
 2. Create a new project
 3. Go to Settings → API
 4. Copy the Project URL and Service Role Key
-5. Run the SQL schema from `/sql/01-create-tables.sql` in your Supabase SQL Editor
+5. **IMPORTANT**: Run the COMPLETE setup script in your Supabase SQL Editor:
+
+#### Database Setup:
+
+- First, if you have existing tables, drop them using `sql/drop-tables.sql`
+- Then run the complete setup: `sql/00-complete-setup.sql`
+
+This creates both the NextAuth schema (for authentication) and your application schema (for projects/messages).
 
 ### Step 4: Configure Vercel Environment Variables
 
@@ -72,6 +79,13 @@ Or use: https://generate-secret.vercel.app/32
 
 After adding the environment variables, trigger a new deployment to apply the changes.
 
+## Database Schema
+
+The application uses two schemas:
+
+1. **`next_auth` schema**: For NextAuth authentication (users, sessions, accounts)
+2. **`public` schema**: For your application data (projects, messages, custom user data)
+
 ## Troubleshooting
 
 ### Common Issues:
@@ -79,12 +93,21 @@ After adding the environment variables, trigger a new deployment to apply the ch
 1. **"Callback Error"**: Usually means environment variables are missing or incorrect
 2. **OAuth redirect URI mismatch**: Ensure the redirect URI in Google Console matches exactly
 3. **Supabase connection issues**: Verify the URL and service role key are correct
+4. **Database schema issues**: Make sure you ran the complete setup script
 
 ### Testing Locally:
 
 1. Create a `.env.local` file in the dashboard directory with the same variables
 2. Run `npm run dev`
 3. Test the authentication flow
+
+### Debugging Steps:
+
+1. Check Vercel deployment logs for errors
+2. Verify all environment variables are set correctly in Vercel
+3. Ensure Google OAuth redirect URIs are configured properly
+4. Check that the Supabase database schema is set up correctly with both schemas
+5. Test that your Supabase service role key has proper permissions
 
 ## Support
 
@@ -93,4 +116,5 @@ If you continue to experience issues:
 1. Check the Vercel deployment logs
 2. Verify all environment variables are set correctly
 3. Ensure the Google OAuth redirect URIs are configured properly
-4. Check that the Supabase database schema is set up correctly
+4. Check that the complete database schema is set up correctly
+5. Try clearing your browser cookies and testing again
