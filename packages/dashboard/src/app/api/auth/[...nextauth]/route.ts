@@ -59,7 +59,7 @@ const createAuthHandler = () => {
     adapter: PrismaAdapter(prisma),
     pages: {
       signIn: "/auth/signin",
-      newUser: "/onboarding",
+      // newUser: "/onboarding",
     },
     session: {
       strategy: "jwt",
