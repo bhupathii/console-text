@@ -81,32 +81,36 @@ const createAuthHandler = () => {
       },
       async signIn({ user, account, profile }) {
         if (account?.provider === "google") {
+          if (!user.email) {
+            console.error("Google SignIn: Email not found in user profile.");
+            return false; 
+          }
           try {
             const existingUser = await prisma.user.findUnique({
               where: {
-                email: user.email!,
+                email: user.email, // Email is now checked
               },
             });
 
             if (!existingUser) {
               await prisma.user.create({
                 data: {
-                  email: user.email!,
-                  name: user.name!,
-                  image: user.image,
-                  credits: 10, // Default credits from schema
+                  email: user.email,
+                  name: user.name ?? null,  // Allow null if not provided
+                  image: user.image ?? null, // Allow null if not provided
+                  credits: 10, 
                   accounts: {
                     create: {
-                      type: account.type,
-                      provider: account.provider,
-                      providerAccountId: account.providerAccountId,
+                      type: account.type!, // Assuming type is always present from provider
+                      provider: account.provider!, // Assuming provider is always present
+                      providerAccountId: account.providerAccountId!, // Assuming providerAccountId is always present
                       access_token: account.access_token,
+                      refresh_token: account.refresh_token,
+                      expires_at: account.expires_at,
                       token_type: account.token_type,
                       scope: account.scope,
                       id_token: account.id_token,
-                      expires_at: account.expires_at,
                       session_state: account.session_state,
-                      refresh_token: account.refresh_token,
                     },
                   },
                 },
@@ -114,7 +118,12 @@ const createAuthHandler = () => {
             }
             return true;
           } catch (error) {
-            console.error("Sign in error:", error);
+            console.error("Error in Google signIn callback:", error);
+            if (error instanceof Error && error.message.includes("Unique constraint failed")) {
+                console.error("SignIn callback: Unique constraint failed. This might be an issue with an existing account or data.")
+            }
+            // Log more details if it's a Prisma known error, if desired
+            // For example, if (error instanceof Prisma.PrismaClientKnownRequestError) { ... }
             return false;
           }
         }
