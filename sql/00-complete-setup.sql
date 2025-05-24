@@ -8,7 +8,14 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Create the next_auth schema for NextAuth
 CREATE SCHEMA IF NOT EXISTS next_auth;
 
--- Create function to update updated_at timestamp (needed for triggers)
+-- Drop existing triggers if they exist (to avoid conflicts)
+DROP TRIGGER IF EXISTS update_nextauth_accounts_updated_at ON next_auth.accounts;
+DROP TRIGGER IF EXISTS update_nextauth_sessions_updated_at ON next_auth.sessions;
+DROP TRIGGER IF EXISTS update_nextauth_users_updated_at ON next_auth.users;
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
+DROP TRIGGER IF EXISTS update_projects_updated_at ON public.projects;
+
+-- Create or replace function to update updated_at timestamp (needed for triggers)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -106,22 +113,37 @@ CREATE TABLE IF NOT EXISTS public.messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Drop existing indexes if they exist (to avoid conflicts)
+DROP INDEX IF EXISTS accounts_user_id_idx;
+DROP INDEX IF EXISTS sessions_user_id_idx;
+DROP INDEX IF EXISTS sessions_session_token_idx;
+DROP INDEX IF EXISTS accounts_provider_provider_account_id_idx;
+DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_users_google_id;
+DROP INDEX IF EXISTS idx_projects_user_id;
+DROP INDEX IF EXISTS idx_projects_api_key;
+DROP INDEX IF EXISTS idx_projects_enabled;
+DROP INDEX IF EXISTS idx_messages_project_id;
+DROP INDEX IF EXISTS idx_messages_created_at;
+DROP INDEX IF EXISTS idx_messages_severity;
+DROP INDEX IF EXISTS idx_messages_telegram_sent;
+
 -- Create indexes for NextAuth tables
-CREATE INDEX IF NOT EXISTS accounts_user_id_idx ON next_auth.accounts("userId");
-CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON next_auth.sessions("userId");
-CREATE INDEX IF NOT EXISTS sessions_session_token_idx ON next_auth.sessions("sessionToken");
-CREATE UNIQUE INDEX IF NOT EXISTS accounts_provider_provider_account_id_idx ON next_auth.accounts(provider, "providerAccountId");
+CREATE INDEX accounts_user_id_idx ON next_auth.accounts("userId");
+CREATE INDEX sessions_user_id_idx ON next_auth.sessions("userId");
+CREATE INDEX sessions_session_token_idx ON next_auth.sessions("sessionToken");
+CREATE UNIQUE INDEX accounts_provider_provider_account_id_idx ON next_auth.accounts(provider, "providerAccountId");
 
 -- Create indexes for application tables
-CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
-CREATE INDEX IF NOT EXISTS idx_users_google_id ON public.users(google_id);
-CREATE INDEX IF NOT EXISTS idx_projects_user_id ON public.projects(user_id);
-CREATE INDEX IF NOT EXISTS idx_projects_api_key ON public.projects(api_key);
-CREATE INDEX IF NOT EXISTS idx_projects_enabled ON public.projects(enabled);
-CREATE INDEX IF NOT EXISTS idx_messages_project_id ON public.messages(project_id);
-CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_severity ON public.messages(severity);
-CREATE INDEX IF NOT EXISTS idx_messages_telegram_sent ON public.messages(telegram_sent);
+CREATE INDEX idx_users_email ON public.users(email);
+CREATE INDEX idx_users_google_id ON public.users(google_id);
+CREATE INDEX idx_projects_user_id ON public.projects(user_id);
+CREATE INDEX idx_projects_api_key ON public.projects(api_key);
+CREATE INDEX idx_projects_enabled ON public.projects(enabled);
+CREATE INDEX idx_messages_project_id ON public.messages(project_id);
+CREATE INDEX idx_messages_created_at ON public.messages(created_at DESC);
+CREATE INDEX idx_messages_severity ON public.messages(severity);
+CREATE INDEX idx_messages_telegram_sent ON public.messages(telegram_sent);
 
 -- Create triggers for NextAuth tables
 CREATE TRIGGER update_nextauth_accounts_updated_at
@@ -158,6 +180,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing RLS policies if they exist
+DROP POLICY IF EXISTS "Users can view own data" ON public.users;
+DROP POLICY IF EXISTS "Users can update own data" ON public.users;
+DROP POLICY IF EXISTS "Users can insert own data" ON public.users;
+DROP POLICY IF EXISTS "Users can view own projects" ON public.projects;
+DROP POLICY IF EXISTS "Users can manage own projects" ON public.projects;
+DROP POLICY IF EXISTS "Users can view project messages" ON public.messages;
+DROP POLICY IF EXISTS "API can insert messages" ON public.messages;
+
 -- Enable Row Level Security (RLS) for data protection
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
@@ -193,4 +224,15 @@ GRANT USAGE ON SCHEMA next_auth TO authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA next_auth TO authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA next_auth TO authenticated; 
+GRANT ALL ON ALL SEQUENCES IN SCHEMA next_auth TO authenticated;
+
+-- Display success message
+DO $$
+BEGIN
+    RAISE NOTICE 'Console.text database setup completed successfully!';
+    RAISE NOTICE 'Created schemas: next_auth, public';
+    RAISE NOTICE 'Created tables: next_auth.users, next_auth.accounts, next_auth.sessions, next_auth.verification_tokens';
+    RAISE NOTICE 'Created tables: public.users, public.projects, public.messages';
+    RAISE NOTICE 'Enabled RLS and created security policies';
+    RAISE NOTICE 'Ready for NextAuth authentication!';
+END $$; 
