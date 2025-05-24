@@ -2,14 +2,46 @@
 
 import { signIn, getSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SignIn() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check for error in URL parameters
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      switch (errorParam) {
+        case 'Configuration':
+          setError('Authentication is not properly configured. Please contact support.');
+          break;
+        case 'Callback':
+          setError('Authentication callback failed. Please try signing in again.');
+          break;
+        case 'OAuthSignin':
+          setError('Error occurred during OAuth sign-in. Please try again.');
+          break;
+        case 'OAuthCallback':
+          setError('OAuth callback error. Please try again.');
+          break;
+        case 'OAuthCreateAccount':
+          setError('Could not create account. Please try again.');
+          break;
+        case 'EmailCreateAccount':
+          setError('Could not create account with this email.');
+          break;
+        case 'Signin':
+          setError('Sign-in failed. Please try again.');
+          break;
+        default:
+          setError('An authentication error occurred. Please try again.');
+      }
+    }
+
     // Check if auth is configured
     const configured = !!(
       process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -17,7 +49,7 @@ export default function SignIn() {
     );
     setIsConfigured(configured);
 
-    if (configured) {
+    if (configured && !errorParam) {
       // Check if user is already signed in
       getSession().then((session) => {
         if (session) {
@@ -25,19 +57,28 @@ export default function SignIn() {
         }
       });
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleGoogleSignIn = async () => {
     if (!isConfigured) return;
     
     setIsLoading(true);
+    setError(null);
     try {
-      await signIn('google', { 
+      const result = await signIn('google', { 
         callbackUrl: '/dashboard',
-        redirect: true 
+        redirect: false
       });
+      
+      if (result?.error) {
+        setError('Sign-in failed. Please try again.');
+        setIsLoading(false);
+      } else if (result?.url) {
+        router.push(result.url);
+      }
     } catch (error) {
       console.error('Sign in error:', error);
+      setError('An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };
@@ -58,6 +99,22 @@ export default function SignIn() {
               </p>
             </div>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isConfigured ? (
             <>
@@ -138,6 +195,16 @@ export default function SignIn() {
                 <p className="text-yellow-700 text-sm mb-4">
                   Google OAuth authentication is not yet configured. Please set up the required environment variables to enable sign-in functionality.
                 </p>
+                <div className="text-yellow-700 text-xs">
+                  <p className="font-medium mb-2">Required environment variables:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>NEXTAUTH_SECRET</li>
+                    <li>GOOGLE_CLIENT_ID</li>
+                    <li>GOOGLE_CLIENT_SECRET</li>
+                    <li>NEXT_PUBLIC_SUPABASE_URL</li>
+                    <li>SUPABASE_SERVICE_ROLE_KEY</li>
+                  </ul>
+                </div>
               </div>
 
               {/* Footer */}

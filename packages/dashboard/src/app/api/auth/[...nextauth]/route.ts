@@ -60,6 +60,7 @@ const createAuthHandler = () => {
     pages: {
       signIn: "/auth/signin",
       newUser: "/onboarding",
+      error: "/auth/signin",
     },
     session: {
       strategy: "jwt",
@@ -120,6 +121,11 @@ const createAuthHandler = () => {
         }
         return true;
       },
+      async redirect({ url, baseUrl }) {
+        if (url.startsWith("/")) return `${baseUrl}${url}`;
+        else if (new URL(url).origin === baseUrl) return url;
+        return baseUrl;
+      },
     },
   });
 };
@@ -129,3 +135,4 @@ const handler =
   missingVars.length > 0 ? createErrorHandler() : createAuthHandler();
 
 export { handler as GET, handler as POST };
+
