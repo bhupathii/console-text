@@ -22,6 +22,7 @@ const requiredEnvVars = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
 };
 
 const missingVars = Object.entries(requiredEnvVars)
@@ -44,6 +45,7 @@ const createErrorHandler = () => {
         return `${baseUrl}/auth/signin?error=Configuration`;
       },
     },
+    secret: process.env.NEXTAUTH_SECRET || "fallback-secret",
   });
 };
 
@@ -57,6 +59,13 @@ const createAuthHandler = () => {
       GoogleProvider({
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        authorization: {
+          params: {
+            prompt: "consent",
+            access_type: "offline",
+            response_type: "code"
+          }
+        }
       }),
     ],
     adapter: SupabaseAdapter({
@@ -70,7 +79,9 @@ const createAuthHandler = () => {
     },
     session: {
       strategy: "database",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
     },
+    secret: process.env.NEXTAUTH_SECRET!,
     callbacks: {
       async session({ session, user }) {
         if (user && session.user) {
@@ -78,13 +89,14 @@ const createAuthHandler = () => {
         }
         return session;
       },
-      async signIn({ user, account, profile }) {
+      async signIn({ user, account }) {
         if (account?.provider === "google") {
           try {
-            // The adapter will handle user creation automatically
-            // We just need to update our custom users table
+            // The adapter will handle user creation automatically in next_auth schema
+            // We need to sync with our custom users table
             const supabase = createClient(supabaseUrl, supabaseServiceKey);
             
+            // Check if user exists in our custom users table
             const { data: existingUser, error } = await supabase
               .from("users")
               .select("*")
@@ -92,6 +104,7 @@ const createAuthHandler = () => {
               .single();
 
             if (error && error.code !== "PGRST116") {
+              // PGRST116 = no rows returned, which is fine for new users
               console.error("Error checking user:", error);
               return true; // Let NextAuth handle it
             }
@@ -109,20 +122,25 @@ const createAuthHandler = () => {
                 });
 
               if (insertError) {
-                console.error("Error creating user:", insertError);
+                console.error("Error creating user in custom table:", insertError);
+                // Don't fail the sign-in if custom table insert fails
               }
             } else {
-              // Update last login
+              // Update last login for existing user
               await supabase
                 .from("users")
-                .update({ last_login: new Date().toISOString() })
+                .update({ 
+                  last_login: new Date().toISOString(),
+                  avatar_url: user.image, // Update avatar in case it changed
+                  name: user.name! // Update name in case it changed
+                })
                 .eq("id", existingUser.id);
             }
 
             return true;
           } catch (error) {
             console.error("Sign in error:", error);
-            return true; // Let NextAuth handle it
+            return true; // Don't block sign-in due to custom table errors
           }
         }
         return true;
@@ -135,6 +153,7 @@ const createAuthHandler = () => {
         return baseUrl;
       },
     },
+    debug: process.env.NODE_ENV === "development",
   });
 };
 

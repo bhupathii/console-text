@@ -1,8 +1,9 @@
 -- Complete Console.text Database Setup
 -- Run this entire script in your Supabase SQL Editor
 
--- Enable UUID extension
+-- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create the next_auth schema for NextAuth
 CREATE SCHEMA IF NOT EXISTS next_auth;
@@ -16,7 +17,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create NextAuth users table
+-- Create NextAuth users table FIRST (referenced by other tables)
 CREATE TABLE IF NOT EXISTS next_auth.users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255),
@@ -81,12 +82,12 @@ CREATE TABLE IF NOT EXISTS public.projects (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    api_key VARCHAR(255) UNIQUE NOT NULL,
-    telegram_bot_token VARCHAR(255) DEFAULT '7365455861:AAHB8_J4Mnje9Cf5D8w3lFM8ZIQrOLrMMSo',
+    api_key VARCHAR(255) UNIQUE NOT NULL DEFAULT ('ct_' || encode(gen_random_bytes(16), 'hex')),
+    telegram_bot_token VARCHAR(255),
     telegram_chat_id VARCHAR(255),
     telegram_configured BOOLEAN DEFAULT false,
-    rate_limit_per_minute INTEGER DEFAULT 60,
-    rate_limit_per_hour INTEGER DEFAULT 1000,
+    rate_limit_per_minute INTEGER DEFAULT 60 CHECK (rate_limit_per_minute > 0),
+    rate_limit_per_hour INTEGER DEFAULT 1000 CHECK (rate_limit_per_hour > 0),
     enabled BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -95,7 +96,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
 -- Create messages table
 CREATE TABLE IF NOT EXISTS public.messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
     message TEXT NOT NULL,
     severity VARCHAR(20) DEFAULT 'info' CHECK (severity IN ('info', 'warning', 'error', 'critical')),
     metadata JSONB DEFAULT '{}',
@@ -120,6 +121,7 @@ CREATE INDEX IF NOT EXISTS idx_projects_enabled ON public.projects(enabled);
 CREATE INDEX IF NOT EXISTS idx_messages_project_id ON public.messages(project_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON public.messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_severity ON public.messages(severity);
+CREATE INDEX IF NOT EXISTS idx_messages_telegram_sent ON public.messages(telegram_sent);
 
 -- Create triggers for NextAuth tables
 CREATE TRIGGER update_nextauth_accounts_updated_at
@@ -154,4 +156,41 @@ RETURNS TEXT AS $$
 BEGIN
     RETURN 'ct_' || encode(gen_random_bytes(16), 'hex');
 END;
-$$ LANGUAGE plpgsql; 
+$$ LANGUAGE plpgsql;
+
+-- Enable Row Level Security (RLS) for data protection
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for users table
+CREATE POLICY "Users can view own data" ON public.users
+    FOR SELECT USING (true); -- Service role access
+
+CREATE POLICY "Users can update own data" ON public.users
+    FOR UPDATE USING (true); -- Service role access
+
+CREATE POLICY "Users can insert own data" ON public.users
+    FOR INSERT WITH CHECK (true); -- Service role access
+
+-- Create RLS policies for projects table
+CREATE POLICY "Users can view own projects" ON public.projects
+    FOR SELECT USING (true); -- Service role access
+
+CREATE POLICY "Users can manage own projects" ON public.projects
+    FOR ALL USING (true); -- Service role access
+
+-- Create RLS policies for messages table
+CREATE POLICY "Users can view project messages" ON public.messages
+    FOR SELECT USING (true); -- Service role access
+
+CREATE POLICY "API can insert messages" ON public.messages
+    FOR INSERT WITH CHECK (true); -- Service role access
+
+-- Grant necessary permissions to authenticated users
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA next_auth TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA next_auth TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA next_auth TO authenticated; 

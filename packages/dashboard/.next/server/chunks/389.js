@@ -1,1 +1,1 @@
-"use strict";exports.id=389,exports.ids=[389],exports.modules={81389:(s,e,t)=>{t.d(e,{default:()=>a});let a=(0,t(53189).createProxy)(String.raw`C:\Users\hvign\Desktop\console-text\packages\dashboard\src\app\dashboard\dashboard-client.tsx#default`)}};
+"use strict";exports.id=389,exports.ids=[389],exports.modules={81389:(s,e,a)=>{a.d(e,{default:()=>t});let t=(0,a(53189).createProxy)(String.raw`C:\Users\NANGU BHUPATHI REDDY\Downloads\fuck 1.1\console-text\packages\dashboard\src\app\dashboard\dashboard-client.tsx#default`)}};
